@@ -1,0 +1,155 @@
+// This is your Prisma schema file
+// Learn more about it at: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  avatarUrl     String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  resumes       Resume[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// REFRESH TOKENS (persistent login)
+// ─────────────────────────────────────────────
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────────────────────────
+// RESUME
+// ─────────────────────────────────────────────
+model Resume {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fileName     String
+  originalName String
+  fileUrl      String?
+  parsedText   String    @db.Text
+  fileSize     Int
+
+  title        String?
+  targetRole   String?
+  targetCompany String?
+
+  status       ResumeStatus @default(PENDING)
+  version      Int          @default(1)
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  analyses     Analysis[]
+  versions     ResumeVersion[]
+
+  @@map("resumes")
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// RESUME VERSION HISTORY
+// ─────────────────────────────────────────────
+model ResumeVersion {
+  id         String   @id @default(uuid())
+  resumeId   String
+  resume     Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  version    Int
+  parsedText String   @db.Text
+  fileName   String
+  createdAt  DateTime @default(now())
+
+  @@map("resume_versions")
+  @@index([resumeId])
+}
+
+// ─────────────────────────────────────────────
+// ANALYSIS
+// ─────────────────────────────────────────────
+model Analysis {
+  id        String   @id @default(uuid())
+  resumeId  String
+  resume    Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  // ATS Scoring
+  atsScore         Float
+  keywordScore     Float
+  formattingScore  Float
+  readabilityScore Float
+  experienceScore  Float
+  skillsScore      Float
+
+  // Parsed sections
+  skills           String[]
+  experience       Json     @default("[]")
+  education        Json     @default("[]")
+  certifications   String[]
+  keywords         String[]
+  missingKeywords  String[]
+
+  // AI-generated content
+  suggestions      Json     @default("[]")   // [{ category, priority, text }]
+  strengths        String[]
+  weaknesses       String[]
+  summary          String   @db.Text
+
+  // Tailored content
+  tailoredResume   String?  @db.Text
+  jobDescription   String?  @db.Text
+  matchScore       Float?
+
+  // Interview questions
+  interviewQuestions Json   @default("[]")   // [{ type, question, hint }]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("analyses")
+  @@index([resumeId])
+  @@index([atsScore])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ResumeStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
