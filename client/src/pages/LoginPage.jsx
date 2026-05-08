@@ -83,6 +83,11 @@ export default function LoginPage() {
                 className="absolute right-3 top-[34px] text-slate-400 hover:text-white transition-colors">
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
+              <div className="flex justify-end mt-2">
+                <Link to="/forgot-password" className="text-sm text-brand-400 hover:text-brand-300 font-medium transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <motion.button
