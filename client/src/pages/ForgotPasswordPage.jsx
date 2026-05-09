@@ -2,20 +2,22 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Sparkles, ArrowLeft } from 'lucide-react';
+import api from '../lib/api';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [resetUrl, setResetUrl] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      // Simulate API call for sending reset email
-      await new Promise(r => setTimeout(r, 1500));
+      const { data } = await api.post('/auth/forgot-password', { email });
+      setResetUrl(data.resetUrl || '');
       setSuccess(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to send reset email. Please try again.');
@@ -86,6 +88,14 @@ export default function ForgotPasswordPage() {
                <p className="text-slate-400 text-sm mb-6">
                  We've sent password reset instructions to <strong>{email}</strong>
                </p>
+               {resetUrl && (
+                 <a
+                   href={resetUrl}
+                   className="block mb-5 text-sm text-brand-400 hover:text-brand-300 font-medium break-all transition-colors"
+                 >
+                   Open development reset link
+                 </a>
+               )}
                <button
                  onClick={() => setSuccess(false)}
                  className="text-brand-400 hover:text-brand-300 text-sm font-medium transition-colors"

@@ -16,6 +16,17 @@ router.post('/login', [
   body('password').notEmpty(),
 ], authController.login);
 
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+], authController.forgotPassword);
+
+router.post('/reset-password', [
+  body('token').notEmpty().withMessage('Reset token required'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+], authController.resetPassword);
+
+router.get('/oauth/:provider', authController.startOAuth);
+router.get('/oauth/:provider/callback', authController.finishOAuth);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
 router.get('/me', authenticate, authController.getMe);

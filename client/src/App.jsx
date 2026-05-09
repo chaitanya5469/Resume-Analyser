@@ -9,6 +9,8 @@ import PageLoader from './components/PageLoader';
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ResumesPage = lazy(() => import('./pages/ResumesPage'));
@@ -29,6 +31,8 @@ export default function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/auth/callback" element={<AuthCallbackPage />} />
               </Route>
 
               {/* Protected routes */}

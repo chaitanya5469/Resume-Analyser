@@ -42,8 +42,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const completeTokenLogin = useCallback(async ({ accessToken, refreshToken }) => {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    const { data } = await api.get('/auth/me');
+    setUser(data);
+    return data;
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, completeTokenLogin }}>
       {children}
     </AuthContext.Provider>
   );

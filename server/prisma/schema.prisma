@@ -25,6 +25,7 @@ model User {
 
   resumes       Resume[]
   refreshTokens RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
@@ -41,6 +42,20 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // ─────────────────────────────────────────────
