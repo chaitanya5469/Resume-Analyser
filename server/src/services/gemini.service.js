@@ -98,16 +98,70 @@ function stripJsonFences(text) {
   return text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
 }
 
+/**
+ * Attempt to repair truncated JSON by closing open strings, arrays, and objects.
+ * This handles the case where Gemini hits the maxOutputTokens limit mid-response.
+ */
+function repairTruncatedJson(text) {
+  let repaired = text.trim();
+
+  // Remove trailing comma that would make JSON invalid
+  repaired = repaired.replace(/,\s*$/, '');
+
+  // Track open brackets/braces to know what needs closing
+  let inString = false;
+  let escaped = false;
+  const stack = [];
+
+  for (let i = 0; i < repaired.length; i++) {
+    const ch = repaired[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\' && inString) { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{' || ch === '[') stack.push(ch);
+    if (ch === '}' || ch === ']') stack.pop();
+  }
+
+  // If we're inside a string, close it
+  if (inString) repaired += '"';
+
+  // Remove any trailing partial key-value like `"key": ` or `, "key":`
+  repaired = repaired.replace(/,\s*"[^"]*"\s*:\s*$/, '');
+  repaired = repaired.replace(/,\s*$/, '');
+
+  // Close all open brackets/braces
+  while (stack.length) {
+    const open = stack.pop();
+    repaired += open === '{' ? '}' : ']';
+  }
+
+  return repaired;
+}
+
 function parseJsonResponse(text) {
   const cleaned = stripJsonFences(text);
   try {
     return JSON.parse(cleaned);
   } catch {
+    // Try extracting the JSON object
     const start = cleaned.indexOf('{');
     const end = cleaned.lastIndexOf('}');
     if (start >= 0 && end > start) {
-      return JSON.parse(cleaned.slice(start, end + 1));
+      try {
+        return JSON.parse(cleaned.slice(start, end + 1));
+      } catch { /* fall through to repair */ }
     }
+
+    // Attempt to repair truncated JSON
+    const jsonStart = cleaned.indexOf('{');
+    if (jsonStart >= 0) {
+      try {
+        const repaired = repairTruncatedJson(cleaned.slice(jsonStart));
+        return JSON.parse(repaired);
+      } catch { /* give up */ }
+    }
+
     throw new Error('Gemini returned an invalid JSON response');
   }
 }
@@ -138,18 +192,14 @@ ${prompt}
         generationConfig: {
           responseMimeType: 'application/json',
           temperature: 0.2,
-          maxOutputTokens: 1800,
+          maxOutputTokens: 4096,
         },
       });
 
       rawText = result.response.text();
 
-      const cleaned = rawText
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
-        .trim();
-
-      return JSON.parse(cleaned);
+      // Use the robust parseJsonResponse which can handle truncation
+      return parseJsonResponse(rawText);
     } catch (err) {
       err.rawText = rawText;
       lastError = err;
@@ -164,8 +214,13 @@ ${prompt}
     }
   }
 
+  console.error('All Gemini retries exhausted. Last error:', lastError?.message);
+  if (lastError?.rawText) {
+    console.error('Last raw response (first 500 chars):', lastError.rawText.slice(0, 500));
+  }
+
   const error = new Error(
-    `Gemini request failed: ${lastError?.message || 'Unknown error'}`
+    'AI analysis is temporarily unavailable. Please try again in a moment.'
   );
 
   error.statusCode = 502;

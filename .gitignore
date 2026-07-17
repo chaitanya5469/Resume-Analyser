@@ -7,3 +7,4 @@ dist/
 .DS_Store
 client/dist/
 server/dist/
+INTERVIEW_PREP.md

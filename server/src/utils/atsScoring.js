@@ -89,7 +89,7 @@ export function scoreResumeDeterministically(text, { targetRole = '', jobDescrip
 
   const keywordScore = expectedKeywords.length
     ? clamp(45 + (matchedExpected.length / expectedKeywords.length) * 55)
-    : 75;
+    : 35;
   const skillsScore = detectedSkillCount
     ? clamp(50 + (Math.min(detectedSkillCount, 10) / 10) * 50)
     : 35;
